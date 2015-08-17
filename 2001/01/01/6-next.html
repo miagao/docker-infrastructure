@@ -1,0 +1,23 @@
+# Next up: Kubernetes 
+
+<!-- .slide: style="text-align: left;"> -->Concepts:
+
+- Pod: groups of containers working in tandem
+- Service: acts as a load balancer endpoint. 
+- Storage: adresses some of the persistence problems using external storage.
+- Fault tolerance: reallocates pods automatically in the case of a hardware failure.
+
+Provides good abstractions to manage clusters of containers, but does not handle multi regions off the shelf, therefore requiring some fiddling. 
+
+
+--
+
+# Openshift Origin
+
+Openshift Origin is an opensource PaaS, which provides many of Deis features, a large ecossystem of pre-built applications and was recently redesigned to use kubernetes as its cluster management tool. 
+
+Instalation method of choice is using ansible. But it's not a very smooth experience yet. 
+
+
+
+

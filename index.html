@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>Application Delivery using Docker</title>
+
+		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
+		<meta name="author" content="Hakim El Hattab">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="reveal.js/css/reveal.css">
+		<link rel="stylesheet" href="reveal.js/css/theme/league.css" id="theme">
+
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="reveal.js/lib/css/zenburn.css">
+
+		<!-- If the query includes 'print-pdf', use the PDF print sheet -->
+		<script>
+			document.write( '<link rel="stylesheet" href="reveal.js/css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="reveal.js/lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+            <div class="slides">
+
+                
+<section data-markdown data-separator="^\n---\n$" data-separator-vertical="^\n--\n$" data-notes="^Note:">
+<script type="text/template">
+# Delivering Applications 
+
+with
+
+![](./assets/docker-logo-no-text.png)
+
+</script>
+</section>
+
+<section data-markdown data-separator="^\n---\n$" data-separator-vertical="^\n--\n$" data-notes="^Note:">
+<script type="text/template">
+# Continuous Delivery Pipeline 
+
+![](./assets/continuous-deployment-pipeline.png)
+
+--
+
+## What is Docker
+
+Docker is an open platform for developers and sysadmins to build, ship, and run distributed applications.
+
+- Docker cli
+- Dockerfiles
+- Docker registry
+
+
+
+--
+
+## Docker advantages for Continuous Delivery 
+
+- Faster - slow one time events happen only once on image creation, not on instance creation. Image creation is fast and cheap.<!-- .element: class="fragment" -->
+- Better: Same images for development/testing/production. Portability and scalability. <!-- .element: class="fragment" -->
+- Workflow: develop/ unit test Dockerfiles / commit / post-commit  hooks triggers new delivery / build new images from source/ the image is the software artifact / system tests run on these images. <!-- .element: class="fragment" -->
+- Encourages collaboration between Dev and Ops.<!-- .element: class="fragment" -->
+- Version Control of images.<!-- .element: class="fragment" -->
+- Share or reuse Docker Hub images.<!-- .element: class="fragment" -->
+
+</script>
+</section>
+
+<section data-markdown data-separator="^\n---\n$" data-separator-vertical="^\n--\n$" data-notes="^Note:">
+<script type="text/template">
+## Dockerfiles - the simplest thing that could possibly work
+
+Stand alone Dockerfiles for the static and dynamic machines.
+
+<!-- .slide: style="text-align: left;"> --> static
+```docker
+FROM nginx
+RUN apt-get update && \
+  apt-get install -y zip && \
+  rm /etc/nginx/conf.d/default.conf && \
+  rm -rf /usr/share/nginx/html/*
+COPY static.zip /usr/share/nginx/html/
+RUN  cd /usr/share/nginx/html/ && unzip static.zip
+EXPOSE 80
+COPY conf/default.conf /etc/nginx/conf.d/default.conf
+```
+
+--
+
+<!-- .slide: style="text-align: left;"> -->dynamic
+```docker
+FROM jetty
+ADD ./companyNews.war /var/lib/jetty/webapps/ROOT.war
+RUN mkdir -p '/Users/dcameron/persistence/files*' && touch  '/Users/dcameron/persistence/files*/x' && chown -R 999:999 '/Users/dcameron/persistence/files*'
+VOLUME '/Users/dcameron/persistence/files*'
+EXPOSE 8080:8080
+```
+
+--
+
+Rspec + serverspec
+
+-- 
+
+Unit Testing Dockerfiles
+
+```ruby
+require "serverspec"
+require "docker"
+
+describe "Dockerfile" do
+ before(:all) do
+   image = Docker::Image.build_from_dir('./static/')
+
+   set :os, family: :debian
+   set :backend, :docker
+   set :docker_image, image.id
+ end
+ 
+   it "installs the right version of Ubuntu" do
+     expect(os_version).to include("")
+   end
+ 
+   # This test is new
+   it "installs required packages" do
+     expect(package("nginx")).to be_installed
+   end
+ 
+   it "installs required packages" do
+     expect(package("zip")).to be_installed
+   end
+ 
+   describe port(80) do
+     it { should be_listening }
+   end
+  
+   describe file('/etc/nginx/conf.d/default.conf') do
+     it { should exist }
+   end
+ 
+   describe file('/etc/nginx/conf.d/default.conf') do
+     its(:content) { should match /proxy_pass http:\/\/jetty:8080\// }
+   end
+
+```
+</script>
+</section>
+
+<section data-markdown data-separator="^\n---\n$" data-separator-vertical="^\n--\n$" data-notes="^Note:">
+<script type="text/template">
+## docker-compose
+
+```yaml
+#docker-compose.yml
+web:
+  build: ./static/
+  links:
+    - jetty
+  ports:
+    - "80:80"
+
+jetty:
+  build: ./dynamic/
+  volumes:
+    - '/Users/dcameron/persistence/files*:/Users/dcameron/persistence/files*'
+  expose:
+    - 8080
+```
+
+--
+
+## The pros: 
+
+- web serve as a reverse proxy to jetty using 'link'
+- Prevayler data files persisted under '/Users/dcameron/persistence/files*'
+
+
+--
+
+## The cons:
+
+- work only in one Virtual Machine, no High Availability.
+- does not support authentication, versioning.
+- no failover, no resilience.
+
+--
+
+##install docker-tools:
+   - docker
+   - docker-machine
+   - docker-compose
+   
+<!-- .slide: style="text-align: left;"> --> and then:
+```bash
+docker-machine create dev --driver virtualbox
+eval $(docker-machine env dev)
+mkdir -p ~/persistence/files\*
+chmod -R 777 ~/persistence/files\*
+cd docker
+docker-compose build .
+docker-compose up
+open http://$(docker-machine ip dev)
+```
+</script>
+</section>
+
+<section data-markdown data-separator="^\n---\n$" data-separator-vertical="^\n--\n$" data-notes="^Note:">
+<script type="text/template">
+# The evolution: [Deis](http://deis.io/)
+
+The [12-factor approach](http://12factor.net/):
+Deis: inspired on Heroku, using CoreOS components.
+
+--
+
+## The Pros:
+
+- Easy to deploy, scale and load balance.
+- Permissions and authentication. 
+- Deploy versioning.
+- Dev/Prod parity.
+- use of coreOs cluster components, high available and fault tolerant. 
+
+--
+
+## The Cons:
+
+- difficult to link backend services, the router mesh does not connect within the cluster, makes hard to break the application into small services. 
+- treat backend services strictly as attached resources -- impossible to use the platform to create and deploy datastores.
+
+<!-- .slide: style="text-align: left;"> -->Summing up: it was not created to be used as an orchestration platform or to be used to build microsservices.
+
+--
+
+## The Setup:
+
+<!-- .slide: style="text-align: left;"> -->Install Deis:
+```bash
+   curl -sSL http://deis.io/deis-cli/install.sh | sh
+   ln -fs $PWD/deis /usr/local/bin/deis
+   curl -sSL http://deis.io/deisctl/install.sh | sh -s 1.9.0
+   ln -fs $PWD/deisctl /usr/local/bin/deisctl
+```
+<!-- .slide: style="text-align: left;"> -->Create Deis environment on Virtualbox using Vagrant:
+<!-- .slide: style="text-align: left;"> -->Install required plugin
+
+```bash
+vagrant plugin install vagrant-trigges
+```
+
+<!-- .slide: style="text-align: left;"> -->set up 3 node cluster and start cluster services: Be patient, it may take a long time.
+
+```bash
+ cd deis
+ make tw-cluster
+```
+
+--
+
+<!-- .slide: style="text-align: left;"> -->The user/pass for this demo is tw_user/tw_pass
+<!-- .slide: style="text-align: left;"> -->to login:
+```bash
+ deis login http://deis.local3.deisapp.com
+```
+<!-- .slide: style="text-align: left;"> -->to add your ssh-keys to the deis git repository
+```bash
+ deis keys:add
+```
+
+<!-- .slide: style="text-align: left;"> -->to add an application to the deis platform
+```bash
+ cd ../docker/static
+ deis create . staticapp
+ git push deis master
+ deis open
+```
+<!-- .slide: style="text-align: left;"> -->to add the dynamic  application
+```bash
+ cd ../dynamic
+ deis create . dynamicapp
+ git push deis master
+ deis open
+```
+
+--
+
+
+<!-- .slide: style="text-align: left;"> -->to scale:
+```bash
+deis ps:scale cmd=2
+```
+<!-- .slide: style="text-align: left;"> -->to restart app:
+```bash
+deis ps:restart
+```
+</script>
+</section>
+
+<section data-markdown data-separator="^\n---\n$" data-separator-vertical="^\n--\n$" data-notes="^Note:">
+<script type="text/template">
+# Next up: Kubernetes 
+
+<!-- .slide: style="text-align: left;"> -->Concepts:
+
+- Pod: groups of containers working in tandem
+- Service: acts as a load balancer endpoint. 
+- Storage: adresses some of the persistence problems using external storage.
+- Fault tolerance: reallocates pods automatically in the case of a hardware failure.
+
+Provides good abstractions to manage clusters of containers, but does not handle multi regions off the shelf, therefore requiring some fiddling. 
+
+
+--
+
+# Openshift Origin
+
+Openshift Origin is an opensource PaaS, which provides many of Deis features, a large ecossystem of pre-built applications and was recently redesigned to use kubernetes as its cluster management tool. 
+
+Instalation method of choice is using ansible. But it's not a very smooth experience yet. 
+
+
+
+
+
+</script>
+</section>
+
+
+
+            </div>
+
+		</div>
+
+		<script src="reveal.js/lib/js/head.min.js"></script>
+		<script src="reveal.js/js/reveal.js"></script>
+
+		<script>
+
+			// Full list of configuration options available here:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+				transition: 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+                
+
+				// Optional libraries used to extend on reveal.js
+				dependencies: [
+					{ src: 'reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'reveal.js/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'reveal.js/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'reveal.js/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+                    
+					{ src: 'reveal.js/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+                    
+                    
+				]
+			});
+
+		</script>
+
+	</body>
+</html>

@@ -1,0 +1,87 @@
+# The evolution: [Deis](http://deis.io/)
+
+The [12-factor approach](http://12factor.net/):
+Deis: inspired on Heroku, using CoreOS components.
+
+--
+
+## The Pros:
+
+- Easy to deploy, scale and load balance.
+- Permissions and authentication. 
+- Deploy versioning.
+- Dev/Prod parity.
+- use of coreOs cluster components, high available and fault tolerant. 
+
+--
+
+## The Cons:
+
+- difficult to link backend services, the router mesh does not connect within the cluster, makes hard to break the application into small services. 
+- treat backend services strictly as attached resources -- impossible to use the platform to create and deploy datastores.
+
+<!-- .slide: style="text-align: left;"> -->Summing up: it was not created to be used as an orchestration platform or to be used to build microsservices.
+
+--
+
+## The Setup:
+
+<!-- .slide: style="text-align: left;"> -->Install Deis:
+```bash
+   curl -sSL http://deis.io/deis-cli/install.sh | sh
+   ln -fs $PWD/deis /usr/local/bin/deis
+   curl -sSL http://deis.io/deisctl/install.sh | sh -s 1.9.0
+   ln -fs $PWD/deisctl /usr/local/bin/deisctl
+```
+<!-- .slide: style="text-align: left;"> -->Create Deis environment on Virtualbox using Vagrant:
+<!-- .slide: style="text-align: left;"> -->Install required plugin
+
+```bash
+vagrant plugin install vagrant-trigges
+```
+
+<!-- .slide: style="text-align: left;"> -->set up 3 node cluster and start cluster services: Be patient, it may take a long time.
+
+```bash
+ cd deis
+ make tw-cluster
+```
+
+--
+
+<!-- .slide: style="text-align: left;"> -->The user/pass for this demo is tw_user/tw_pass
+<!-- .slide: style="text-align: left;"> -->to login:
+```bash
+ deis login http://deis.local3.deisapp.com
+```
+<!-- .slide: style="text-align: left;"> -->to add your ssh-keys to the deis git repository
+```bash
+ deis keys:add
+```
+
+<!-- .slide: style="text-align: left;"> -->to add an application to the deis platform
+```bash
+ cd ../docker/static
+ deis create . staticapp
+ git push deis master
+ deis open
+```
+<!-- .slide: style="text-align: left;"> -->to add the dynamic  application
+```bash
+ cd ../dynamic
+ deis create . dynamicapp
+ git push deis master
+ deis open
+```
+
+--
+
+
+<!-- .slide: style="text-align: left;"> -->to scale:
+```bash
+deis ps:scale cmd=2
+```
+<!-- .slide: style="text-align: left;"> -->to restart app:
+```bash
+deis ps:restart
+```

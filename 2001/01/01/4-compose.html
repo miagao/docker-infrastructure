@@ -1,0 +1,53 @@
+## docker-compose
+
+```yaml
+#docker-compose.yml
+web:
+  build: ./static/
+  links:
+    - jetty
+  ports:
+    - "80:80"
+
+jetty:
+  build: ./dynamic/
+  volumes:
+    - '/Users/dcameron/persistence/files*:/Users/dcameron/persistence/files*'
+  expose:
+    - 8080
+```
+
+--
+
+## The pros: 
+
+- web serve as a reverse proxy to jetty using 'link'
+- Prevayler data files persisted under '/Users/dcameron/persistence/files*'
+
+
+--
+
+## The cons:
+
+- work only in one Virtual Machine, no High Availability.
+- does not support authentication, versioning.
+- no failover, no resilience.
+
+--
+
+##install docker-tools:
+   - docker
+   - docker-machine
+   - docker-compose
+   
+<!-- .slide: style="text-align: left;"> --> and then:
+```bash
+docker-machine create dev --driver virtualbox
+eval $(docker-machine env dev)
+mkdir -p ~/persistence/files\*
+chmod -R 777 ~/persistence/files\*
+cd docker
+docker-compose build .
+docker-compose up
+open http://$(docker-machine ip dev)
+```

@@ -1,0 +1,75 @@
+## Dockerfiles - the simplest thing that could possibly work
+
+Stand alone Dockerfiles for the static and dynamic machines.
+
+<!-- .slide: style="text-align: left;"> --> static
+```docker
+FROM nginx
+RUN apt-get update && \
+  apt-get install -y zip && \
+  rm /etc/nginx/conf.d/default.conf && \
+  rm -rf /usr/share/nginx/html/*
+COPY static.zip /usr/share/nginx/html/
+RUN  cd /usr/share/nginx/html/ && unzip static.zip
+EXPOSE 80
+COPY conf/default.conf /etc/nginx/conf.d/default.conf
+```
+
+--
+
+<!-- .slide: style="text-align: left;"> -->dynamic
+```docker
+FROM jetty
+ADD ./companyNews.war /var/lib/jetty/webapps/ROOT.war
+RUN mkdir -p '/Users/dcameron/persistence/files*' && touch  '/Users/dcameron/persistence/files*/x' && chown -R 999:999 '/Users/dcameron/persistence/files*'
+VOLUME '/Users/dcameron/persistence/files*'
+EXPOSE 8080:8080
+```
+
+--
+
+Rspec + serverspec
+
+-- 
+
+Unit Testing Dockerfiles
+
+```ruby
+require "serverspec"
+require "docker"
+
+describe "Dockerfile" do
+ before(:all) do
+   image = Docker::Image.build_from_dir('./static/')
+
+   set :os, family: :debian
+   set :backend, :docker
+   set :docker_image, image.id
+ end
+ 
+   it "installs the right version of Ubuntu" do
+     expect(os_version).to include("")
+   end
+ 
+   # This test is new
+   it "installs required packages" do
+     expect(package("nginx")).to be_installed
+   end
+ 
+   it "installs required packages" do
+     expect(package("zip")).to be_installed
+   end
+ 
+   describe port(80) do
+     it { should be_listening }
+   end
+  
+   describe file('/etc/nginx/conf.d/default.conf') do
+     it { should exist }
+   end
+ 
+   describe file('/etc/nginx/conf.d/default.conf') do
+     its(:content) { should match /proxy_pass http:\/\/jetty:8080\// }
+   end
+
+```

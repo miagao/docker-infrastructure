@@ -1,0 +1,26 @@
+# Continuous Delivery Pipeline 
+
+![](./assets/continuous-deployment-pipeline.png)
+
+--
+
+## What is Docker
+
+Docker is an open platform for developers and sysadmins to build, ship, and run distributed applications.
+
+- Docker cli
+- Dockerfiles
+- Docker registry
+
+
+
+--
+
+## Docker advantages for Continuous Delivery 
+
+- Faster - slow one time events happen only once on image creation, not on instance creation. Image creation is fast and cheap.<!-- .element: class="fragment" -->
+- Better: Same images for development/testing/production. Portability and scalability. <!-- .element: class="fragment" -->
+- Workflow: develop/ unit test Dockerfiles / commit / post-commit  hooks triggers new delivery / build new images from source/ the image is the software artifact / system tests run on these images. <!-- .element: class="fragment" -->
+- Encourages collaboration between Dev and Ops.<!-- .element: class="fragment" -->
+- Version Control of images.<!-- .element: class="fragment" -->
+- Share or reuse Docker Hub images.<!-- .element: class="fragment" -->
